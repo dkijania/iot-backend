@@ -1,0 +1,8 @@
+## Build folder
+target/
+
+## IntelliJ environment setting folder
+.idea/
+
+## IntelliJ project file
+*.iml

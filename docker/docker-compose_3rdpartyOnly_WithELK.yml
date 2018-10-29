@@ -1,0 +1,136 @@
+version: '2'
+services:
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+  mysqldb:
+    build: 
+      context: ../
+      dockerfile: docker/mysql/Dockerfile
+    container_name: mysqldb
+    ports:
+      - "3306:3306"
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+  kafka:
+    image: confluentinc/cp-kafka
+    hostname: kafka
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - '9092:9092'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: '192.168.99.100:2181'
+      KAFKA_ADVERTISED_HOST_NAME: 127.0.0.1
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://192.168.99.100:9092'
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_HEAP_OPTS: "-Xmx200m -Xms200m"
+  measurement-service:
+    container_name: measurement-service
+    build:
+      context: ../
+      dockerfile: measurement-service/target/Dockerfile
+      args:
+        JAVA_OPTS: "-Xmx50m -Xms30m"
+    environment:
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8080:8080"
+      - "8001:8000"
+    links:
+          - mongo
+          - kafka
+  license-status-service:
+    container_name: license-status-service
+    build:
+      context: ../
+      dockerfile: license-status-service/target/Dockerfile
+      args:
+        JAVA_OPTS: "-Xmx50m -Xms30m"
+    environment:
+        SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+        - "8082:8080"
+        - "8003:8000"
+    links:
+        - mongo
+        - userlicense-service
+  userlicense-service:
+    container_name: userlicense-service 
+    build:
+      context: ../
+      dockerfile: userlicense-service/target/Dockerfile
+      args:
+        JAVA_OPTS: "-Xmx50m -Xms30m"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LOGSPOUT_MULTILINE: "true"
+    ports:
+              - "8081:8080"
+              - "8002:8000"
+    links:
+            - mysqldb
+  gateway-webapp:
+    container_name: gateway-webapp 
+    build: 
+      context: ../
+      dockerfile: gateway-webapp/target/Dockerfile
+      args:
+        JAVA_OPTS: "-Xmx50m -Xms30m"
+    ports:
+        - "8091:8080"
+        - "8005:8000"
+    links:
+        - userlicense-service
+  gateway-hardware:
+    container_name: gateway-hardware
+    build:
+      context: ../
+      dockerfile: gateway-hardware/target/Dockerfile
+      args:
+        JAVA_OPTS: "-Xmx50m -Xms30m"
+    environment:
+        SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+        - "8090:8080"
+        - "8004:8000"
+    links:
+        - userlicense-service
+        - license-status-service
+  kibana:  
+    image: kibana
+    links:
+       - elasticsearch:elasticsearch
+    ports:
+       - '5601:5601'
+    environment:
+      LOGSPOUT: ignore
+  logstash:
+    build:
+      context: ../
+      dockerfile: docker/logstash/Dockerfile
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LOGSPOUT: ignore
+    ports:
+      - '5000:5000'
+      - '5000:5000/udp'
+  elasticsearch:  
+    image: elasticsearch
+    ports:
+      - '9200:9200'
+    environment:
+      ES_JAVA_OPTS: -Xms200m -Xmx200m
+      LOGSPOUT: ignore

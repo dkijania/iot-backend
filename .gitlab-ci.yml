@@ -1,0 +1,52 @@
+
+
+variables:
+  MEASUREMENT_REPOSITORY_URL: 673796305703.dkr.ecr.eu-central-1.amazonaws.com/chariot/measurement-service
+  GATEWAY_HARDWARE_REPOSITORY_URL: 673796305703.dkr.ecr.eu-central-1.amazonaws.com/chariot/gateway-hardware
+  GATEWAY_WEBAPP_REPOSITORY_URL: 673796305703.dkr.ecr.eu-central-1.amazonaws.com/chariot/gateway-webapp
+  LICENSE_STATUS_REPOSITORY_URL: 673796305703.dkr.ecr.eu-central-1.amazonaws.com/chariot/license-status-service
+  USER_LICENSE_REPOSITORY_URL: 673796305703.dkr.ecr.eu-central-1.amazonaws.com/chariot/userlicense-service
+  MYSQLDB_REPOSITORY_URL: 673796305703.dkr.ecr.eu-central-1.amazonaws.com/chariot/mysqldb
+
+stages:
+  - build
+  - package
+
+  
+maven-build:
+  image: maven:3-jdk-8
+  stage: build
+  script: "mvn package -B"
+  artifacts:
+    paths:
+      - "*/target/Dockerfile"
+      - "*/target/*.jar"
+      - "docker/*"
+  
+build:
+  image: docker:latest
+  services:
+    - docker:dind
+  stage: package
+  script:
+    - apk add --no-cache curl jq python py-pip tree
+    - pip install awscli
+    - $(aws ecr get-login --no-include-email --region eu-central-1 | sed 's|https://||')
+    - docker build -t $MEASUREMENT_REPOSITORY_URL -f measurement-service/target/Dockerfile .
+    - docker push $MEASUREMENT_REPOSITORY_URL
+    - docker build -t $GATEWAY_HARDWARE_REPOSITORY_URL -f gateway-hardware/target/Dockerfile .
+    - docker push $GATEWAY_HARDWARE_REPOSITORY_URL
+    - docker build -t $GATEWAY_WEBAPP_REPOSITORY_URL -f gateway-webapp/target/Dockerfile .
+    - docker push $GATEWAY_WEBAPP_REPOSITORY_URL
+    - docker build -t $LICENSE_STATUS_REPOSITORY_URL -f license-status-service/target/Dockerfile .
+    - docker push $LICENSE_STATUS_REPOSITORY_URL
+    - docker build -t $USER_LICENSE_REPOSITORY_URL -f userlicense-service/target/Dockerfile .
+    - docker push $USER_LICENSE_REPOSITORY_URL
+    - docker build -t $USER_LICENSE_REPOSITORY_URL -f userlicense-service/target/Dockerfile .
+    - docker push $USER_LICENSE_REPOSITORY_URL
+    - docker build -t $MYSQLDB_REPOSITORY_URL -f docker/mysql/Dockerfile .
+    - docker push $MYSQLDB_REPOSITORY_URL
+  only:
+    - master
+  tags:
+    - docker
