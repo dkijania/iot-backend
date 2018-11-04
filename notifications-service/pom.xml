@@ -138,9 +138,11 @@
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.kinoroy.expo.push</groupId>
+            <artifactId>expo-push-sdk</artifactId>
+        </dependency>
     </dependencies>
-
-
     <build>
         <plugins>
             <plugin>

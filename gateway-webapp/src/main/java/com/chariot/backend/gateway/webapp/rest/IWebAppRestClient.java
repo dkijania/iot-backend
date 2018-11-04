@@ -1,6 +1,8 @@
 package com.chariot.backend.gateway.webapp.rest;
 
 import com.chariot.backend.model.*;
+import com.chariot.backend.schema.login.LoginResponse;
+import com.chariot.backend.schema.notification.NotificationRegistrationToken;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -34,5 +36,13 @@ public interface IWebAppRestClient {
 
     ResponseEntity<License> createNewLicense(int requestsPerSeconds, LicenseType newLicenseType);
 
-    ResponseEntity<String> authenticateUser(String username, String password);
+    ResponseEntity<LoginResponse> authenticateUser(String username, String password);
+
+    void putNewMeasurement(Double value, String channelId) throws Throwable;
+
+    void registerNotificationToken(NotificationRegistrationToken notificationRegistrationToken);
+
+    void setNewMeasurementNotificationRule(String channelId);
+
+    void setOutOfBoundNotificationRule(String channelId, double upperBound, double lowerBound);
 }

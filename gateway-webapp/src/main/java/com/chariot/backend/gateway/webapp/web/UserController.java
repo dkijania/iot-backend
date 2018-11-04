@@ -2,6 +2,7 @@ package com.chariot.backend.gateway.webapp.web;
 
 import com.chariot.backend.gateway.webapp.rest.IWebAppRestClient;
 import com.chariot.backend.model.User;
+import com.chariot.backend.schema.login.LoginResponse;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -51,7 +52,7 @@ public class UserController {
     @ApiOperation(value = "Authenticate user")
     @ResponseStatus(HttpStatus.OK)
     @ResponseBody
-    public ResponseEntity<String> authenticateUser(String username, String password) {
+    public ResponseEntity<LoginResponse> authenticateUser(String username, String password) {
         return remoteServiceCaller.authenticateUser(username, password);
     }
 }

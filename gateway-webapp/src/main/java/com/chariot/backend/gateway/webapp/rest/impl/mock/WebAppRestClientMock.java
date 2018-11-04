@@ -1,7 +1,11 @@
-package com.chariot.backend.gateway.webapp.rest.impl;
+package com.chariot.backend.gateway.webapp.rest.impl.mock;
 
 import com.chariot.backend.gateway.webapp.rest.IWebAppRestClient;
+import com.chariot.backend.gateway.webapp.rest.impl.mock.rule.INotificationRule;
+import com.chariot.backend.gateway.webapp.rest.impl.mock.rule.MeasurementNotificationRuleMockApi;
 import com.chariot.backend.model.*;
+import com.chariot.backend.schema.login.LoginResponse;
+import com.chariot.backend.schema.notification.NotificationRegistrationToken;
 import com.chariot.backend.utils.uuid.GuidGenerator;
 import com.chariot.backend.utils.uuid.UUIDStringConverter;
 import com.google.common.collect.ImmutableList;
@@ -11,8 +15,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -23,6 +25,12 @@ public class WebAppRestClientMock implements IWebAppRestClient {
     private final List<UserLicense> userLicenses = new LinkedList<>();
     private final List<Channel> channels = new LinkedList<>();
     private final List<Measurement> measurements = new LinkedList<>();
+
+    @Autowired
+    private NotificationMockApi notificationMockApi;
+
+    @Autowired
+    private MeasurementNotificationRuleMockApi measurementNotificationRuleMockApi;
 
     @Autowired
     private GuidGenerator guidGenerator;
@@ -41,8 +49,8 @@ public class WebAppRestClientMock implements IWebAppRestClient {
 
         User user = new User();
         user.setLicense(licenses.stream().findFirst().get());
-        user.setName("Dariusz");
-        user.setPassword("Kijania");
+        user.setName("D");
+        user.setPassword("K");
         users.add(user);
 
         channels.add(createChannelForUser(user.getName(), "test").getBody());
@@ -50,9 +58,7 @@ public class WebAppRestClientMock implements IWebAppRestClient {
         int[] array = new Random().ints(100, -20, 60).toArray();
         for (int item : array) {
             Measurement measurement = new Measurement();
-            measurement.setValue((double)item);
-            Instant instant = Instant.now().minus(2, ChronoUnit.DAYS);
-            instant.plus(Math.abs(item == 0 ? item + 10 : item), ChronoUnit.HOURS);
+            measurement.setValue((double) item);
             measurement.setTimestamp(new Date());
             measurements.add(measurement);
         }
@@ -112,13 +118,13 @@ public class WebAppRestClientMock implements IWebAppRestClient {
 
     @Override
     public ResponseEntity<Channel> getChannel(String channelId) {
-        Channel channel = channels.stream().filter(x -> channelId.equals(stringConverter.UUIDToString(x.getId()))).findFirst().get();
+        Channel channel = getChannelById(channelId);
         return new ResponseEntity<>(channel, HttpStatus.OK);
     }
 
     @Override
     public void deleteChannel(String channelId) {
-        Channel channel = channels.stream().filter(x -> stringConverter.UUIDToString(x.getId()).equals(channelId)).findFirst().get();
+        Channel channel = getChannelById(channelId);
         channels.remove(channel);
         User user = users.stream().filter(x -> x.getChannels().contains(channel)).findFirst().get();
         user.getChannels().remove(channel);
@@ -126,7 +132,7 @@ public class WebAppRestClientMock implements IWebAppRestClient {
 
     @Override
     public ResponseEntity<LicenseStatus> getLicenseStatus(String channelId) {
-        Channel channel = channels.stream().filter(x -> stringConverter.UUIDToString(x.getId()).equals(channelId)).findFirst().get();
+        Channel channel = getChannelById(channelId);
         User user = users.stream().filter(x -> x.getChannels().contains(channel)).findFirst().get();
         UserLicense userLicense = userLicenses.stream().filter(x -> x.getUser().equals(user)).findFirst().get();
         LicenseStatus licenseStatus = new LicenseStatus();
@@ -137,15 +143,22 @@ public class WebAppRestClientMock implements IWebAppRestClient {
 
     @Override
     public ResponseEntity<License> getLicenseForChannelId(String channelId) {
-        Channel channel = channels.stream().filter(x -> stringConverter.UUIDToString(x.getId()).equals(channelId)).findFirst().get();
+        Channel channel = getChannelById(channelId);
         User user = users.stream().filter(x -> x.getChannels().contains(channel)).findFirst().get();
         UserLicense userLicense = userLicenses.stream().filter(x -> x.getUser().equals(user)).findFirst().get();
         return new ResponseEntity<>(userLicense.getLicense(), HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<String> authenticateUser(String username, String password) {
-        return null;
+    public ResponseEntity<LoginResponse> authenticateUser(String username, String password) {
+        boolean loginSuccessful = users.stream()
+                .anyMatch(x -> x.getName().equals(username) && x.getPassword().equals(password));
+
+        if (loginSuccessful) {
+            return new ResponseEntity<>(new LoginResponse("Authenticated"), HttpStatus.OK);
+        }
+        return new ResponseEntity<>(new LoginResponse("Unauthorized: Login failed"),
+                HttpStatus.UNAUTHORIZED);
     }
 
     @Override
@@ -161,5 +174,45 @@ public class WebAppRestClientMock implements IWebAppRestClient {
     @Override
     public ResponseEntity<List<Measurement>> getMeasurementForChannelId(String channelId) {
         return new ResponseEntity<>(measurements, HttpStatus.OK);
+    }
+
+    @Override
+    public void putNewMeasurement(Double value, String channelId) throws Throwable {
+        Measurement measurement = new Measurement();
+        measurement.setValue(value);
+        measurement.setTimestamp(new Date());
+        measurements.add(measurement);
+
+        INotificationRule notificationRule = measurementNotificationRuleMockApi.getRuleChannelMapping().get(channelId);
+
+        if (notificationRule.shouldSendNotification(measurement)) {
+            Channel channel = getChannelById(channelId);
+            notificationMockApi.pushNotification(notificationRule.getNotification(measurement, channel));
+        }
+    }
+
+    @Override
+    public void registerNotificationToken(NotificationRegistrationToken notificationRegistrationToken) {
+        notificationMockApi.registerToken(notificationRegistrationToken);
+    }
+
+    private Channel getChannelById(String channelId) {
+        return channels.stream()
+                .filter(x -> stringConverter.UUIDToString(x.getId()).equals(channelId))
+                .findFirst()
+                .get();
+    }
+
+    @Override
+    public void setNewMeasurementNotificationRule(String channelId) {
+        INotificationRule notificationRule = measurementNotificationRuleMockApi.getBuilder().createNewMeasurementRule();
+        measurementNotificationRuleMockApi.getRuleChannelMapping().put(channelId, notificationRule);
+    }
+
+    @Override
+    public void setOutOfBoundNotificationRule(String channelId, double upperBound, double lowerBound) {
+        INotificationRule notificationRule = measurementNotificationRuleMockApi.getBuilder()
+                .createOutOfBoundsRule(lowerBound, upperBound);
+        measurementNotificationRuleMockApi.getRuleChannelMapping().put(channelId, notificationRule);
     }
 }

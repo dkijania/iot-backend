@@ -12,7 +12,7 @@
     <artifactId>gateway-webapp</artifactId>
     <properties>
         <start-class>com.chariot.backend.gateway.webapp.Application</start-class>
-   </properties>
+    </properties>
 
     <profiles>
         <profile>
@@ -21,7 +21,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <actAsMock>false</actAsMock>
+                <actAsMock>true</actAsMock>
             </properties>
         </profile>
         <profile>
@@ -51,12 +51,7 @@
             <artifactId>backend-utils</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
-        <dependency>
-            <groupId>com.chariot.backend</groupId>
-            <artifactId>backend-model</artifactId>
-            <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
+         <dependency>
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
             <scope>test</scope>
@@ -65,7 +60,7 @@
             <groupId>org.easytesting</groupId>
             <artifactId>fest-assert</artifactId>
         </dependency>
-       <dependency>
+        <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
         </dependency>
@@ -115,7 +110,7 @@
         <dependency>
             <groupId>info.batey.kafka</groupId>
             <artifactId>kafka-unit</artifactId>
-       </dependency>
+        </dependency>
         <dependency>
             <groupId>net.logstash.logback</groupId>
             <artifactId>logstash-logback-encoder</artifactId>
@@ -125,7 +120,10 @@
             <artifactId>spring-boot-test-autoconfigure</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>com.kinoroy.expo.push</groupId>
+            <artifactId>expo-push-sdk</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

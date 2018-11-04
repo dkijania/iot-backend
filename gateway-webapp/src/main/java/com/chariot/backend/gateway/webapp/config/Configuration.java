@@ -2,7 +2,7 @@ package com.chariot.backend.gateway.webapp.config;
 
 import com.chariot.backend.gateway.webapp.rest.IWebAppRestClient;
 import com.chariot.backend.gateway.webapp.rest.impl.WebAppRestClient;
-import com.chariot.backend.gateway.webapp.rest.impl.WebAppRestClientMock;
+import com.chariot.backend.gateway.webapp.rest.impl.mock.WebAppRestClientMock;
 import com.chariot.backend.utils.http.RestClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -28,7 +28,7 @@ public class Configuration {
 
 
     @Bean
-    @ConditionalOnProperty(name = "actAsMock",
+    @ConditionalOnProperty(name = "shouldActAsMock",
             havingValue = "false")
     @Primary
     public IWebAppRestClient remoteServiceCaller() {
@@ -36,7 +36,7 @@ public class Configuration {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "actAsMock",
+    @ConditionalOnProperty(name = "shouldActAsMock",
             havingValue = "true")
     @Primary
     public IWebAppRestClient remoteServiceCallerMock() {

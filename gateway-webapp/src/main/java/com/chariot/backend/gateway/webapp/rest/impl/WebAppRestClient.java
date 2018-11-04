@@ -3,6 +3,8 @@ package com.chariot.backend.gateway.webapp.rest.impl;
 import com.chariot.backend.gateway.webapp.config.Configuration;
 import com.chariot.backend.gateway.webapp.rest.IWebAppRestClient;
 import com.chariot.backend.model.*;
+import com.chariot.backend.schema.login.LoginResponse;
+import com.chariot.backend.schema.notification.NotificationRegistrationToken;
 import com.chariot.backend.utils.http.RestClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -66,12 +68,12 @@ public class WebAppRestClient implements IWebAppRestClient {
     }
 
     @Override
-    public ResponseEntity<String> authenticateUser(String username, String password) {
+    public ResponseEntity<LoginResponse> authenticateUser(String username, String password) {
         MultiValueMap<String, String> uriParams = new LinkedMultiValueMap<>();
         uriParams.add("userName", username);
         uriParams.add("password", password);
         String url = configuration.getUserLicenseServiceUrl() + "/chariot/user/authenticate";
-        return restClient.get(uriParams, url, String.class);
+        return restClient.get(uriParams, url, LoginResponse.class);
     }
 
     @Override
@@ -113,5 +115,23 @@ public class WebAppRestClient implements IWebAppRestClient {
         throw new NotImplementedException();
     }
 
+    @Override
+    public void putNewMeasurement(Double value, String channelId) {
+        throw new NotImplementedException();
+    }
 
+    @Override
+    public void registerNotificationToken(NotificationRegistrationToken notificationRegistrationToken) {
+
+    }
+
+    @Override
+    public void setNewMeasurementNotificationRule(String channelId) {
+
+    }
+
+    @Override
+    public void setOutOfBoundNotificationRule(String channelId, double upperBound, double lowerBound) {
+
+    }
 }
